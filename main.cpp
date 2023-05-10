@@ -50,9 +50,9 @@ int main(int argc, char* argv[])
     http_conn* users = new http_conn[MAX_FD];
     // socket
     int listenfd = socket(PF_INET,SOCK_STREAM,0);
-    if(listenfd != 0)
+    if(listenfd == -1)
     {
-        perror("socket");
+        perror("55:socket");
         exit(-1);
     }
     // 设置端口复用
