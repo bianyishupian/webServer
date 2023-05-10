@@ -19,8 +19,20 @@ public:
 
 private:
     // 工作线程运行的函数，它不断从工作队列中取出任务并执行
-    static void *worker(void *arg);
+    static void* worker(void *arg); //静态函数
     void run();
+    /*  
+        游双书上第303页：“值得一提的是，在c++程序中使用pthread_creat时，
+        该函数的第3个参数必须指向一个静态函数”
+    */
+    /*  
+        pthread_create的函数原型中第三个参数的类型为函数指针，
+        指向的线程处理函数参数类型为(void *),若线程函数为类成员函数，
+        则this指针会作为默认的参数被传进函数中，从而和线程函数参数(void*)不能匹配，
+        不能通过编译。
+        静态成员函数就没有这个问题，里面没有this指针。
+
+    */
 
 private:
     
@@ -42,7 +54,7 @@ thread_pool<T>::thread_pool(int thread_num, int max_requests)
         throw std::exception();
     }
 
-    m_threads = new pthread_t[m_thread_number]; // 初始化线程池数组
+    m_threads = new pthread_t[m_thread_num]; // 初始化线程池数组
     if (!m_threads)
     {
         throw std::exception();
@@ -55,7 +67,7 @@ thread_pool<T>::thread_pool(int thread_num, int max_requests)
         // 创建thread_number个线程
         if (pthread_create(m_threads + i, NULL, worker, this) != 0)
         {
-            std::cout<<"- default"<<end;
+            std::cout<<"- default"<<std::endl;    // 调试用
             delete[] m_threads;
             throw std::exception();
         }
@@ -65,9 +77,9 @@ thread_pool<T>::thread_pool(int thread_num, int max_requests)
             delete[] m_threads;
             throw std::exception();
         }
-        std::cout<<"- success"<<end;
+        std::cout<<"- success"<<std::endl;
     }
-    
+
 }
 template<class T>
 thread_pool<T>::~thread_pool()
@@ -78,7 +90,7 @@ thread_pool<T>::~thread_pool()
 template<class T>
 bool thread_pool<T>::append(T* request)
 {
-    m_workQueue.lock();
+    m_locker_workQueue.lock();
     if (m_workQueue.size() >= m_max_requests)
     {
         m_locker_workQueue.unlock();
@@ -89,4 +101,40 @@ bool thread_pool<T>::append(T* request)
     m_sem_workQueue.post();
     return true;
 }
+template<class T>
+void* thread_pool<T>::worker(void* arg)
+{
+    // 将参数转为(thread_pool*)类型
+    thread_pool* pool = (thread_pool*)arg;
+    pool->run();
+    return pool;    // 返回其实没什么意义
+}
+template<class T>
+void thread_pool<T>::run()
+{
+    while (!m_falg_stop)
+    {
+        // 信号量等待
+        m_sem_workQueue.wait();
+        // 被唤醒
+        m_locker_workQueue.lock();
+        if(m_workQueue.empty())
+        {
+            m_locker_workQueue.unlock();
+            continue;
+        }
+
+        T* request = m_workQueue.front();
+        m_workQueue.pop_front();
+        m_locker_workQueue.unlock();
+        if(!request)
+        {
+            continue;
+        }
+        request->process();
+
+    }
+    
+}
+
 #endif
