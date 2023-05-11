@@ -28,8 +28,8 @@ public:
 
     // HTTP请求方法，这里只支持GET
     enum METHOD {GET = 0, POST, HEAD, PUT, DELETE, TRACE, OPTIONS, CONNECT};
-    
-     
+
+
     /*
         解析客户端请求时，主状态机的状态
         CHECK_STATE_REQUESTLINE:当前正在分析请求行
@@ -76,7 +76,7 @@ public:
     bool write();       // 非阻塞写
 
 private:
-    HTTP_CODE process_read();    // 解析HTTP请求
+    HTTP_CODE process_read();               // 解析HTTP请求
     bool process_write( HTTP_CODE ret );    // 填充HTTP应答
 
     // 下面这一组函数被process_read调用以分析HTTP请求
