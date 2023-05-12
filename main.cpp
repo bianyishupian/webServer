@@ -32,8 +32,10 @@ int main(int argc, char* argv[])
         exit(-1);
     }
     int port = atoi(argv[1]);
-
+    
+    // 添加信号捕捉，忽略SIGPIPE
     add_sig(SIGPIPE,SIG_IGN);
+    
     // 创建线程池，初始化
     thread_pool<http_conn>*pool = NULL;
     try

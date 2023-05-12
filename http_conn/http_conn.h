@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <string>
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -18,13 +19,16 @@
 
 #include "../thread_pool/locker.h"
 
+
+
 class http_conn
 {
 public:
-    static int m_epollfd;       // 所有的socket上的事件都注册到一个epoll中
-    static int m_user_count;    // 统计用户的数量
+    static int m_epollfd;                       // 所有的socket上的事件都注册到一个epoll中
+    static int m_user_count;                    // 统计用户的数量
     static const int READ_BUFFER_SIZE = 2048;   // 读缓冲区大小
     static const int WRITE_BUFFER_SIZE = 2048;  // 写缓冲区大小
+    static const int FILENAME_LEN = 200;        // 文件名的最大长度
 
     // HTTP请求方法，这里只支持GET
     enum METHOD {GET = 0, POST, HEAD, PUT, DELETE, TRACE, OPTIONS, CONNECT};
@@ -32,14 +36,18 @@ public:
 
     /*
         解析客户端请求时，主状态机的状态
-        CHECK_STATE_REQUESTLINE:当前正在分析请求行
-        CHECK_STATE_HEADER:当前正在分析头部字段
-        CHECK_STATE_CONTENT:当前正在解析请求体
+        CHECK_STATE_REQUESTLINE :   当前正在分析请求行
+        CHECK_STATE_HEADER      :   当前正在分析头部字段
+        CHECK_STATE_CONTENT     :   当前正在解析请求体
     */
     enum CHECK_STATE { CHECK_STATE_REQUESTLINE = 0, CHECK_STATE_HEADER, CHECK_STATE_CONTENT };
     
-    // 从状态机的三种可能状态，即行的读取状态，分别表示
-    // 1.读取到一个完整的行 2.行出错 3.行数据尚且不完整
+    /*
+        从状态机的三种可能状态，即行的读取状态，分别表示
+        LINE_OK     :   读取到一个完整的行
+        LINE_BAD    :   行出错
+        LINE_OPEN   :   行数据尚且不完整
+    */
     enum LINE_STATUS { LINE_OK = 0, LINE_BAD, LINE_OPEN };
     
     /*
@@ -76,6 +84,8 @@ public:
     bool write();       // 非阻塞写
 
 private:
+    void init();        // 初始化其余数据
+
     HTTP_CODE process_read();               // 解析HTTP请求
     bool process_write( HTTP_CODE ret );    // 填充HTTP应答
 
@@ -101,20 +111,36 @@ private:
     
 
 private:
-    int m_sockfd;               // 该http连接的socket
-    sockaddr_in m_address;      // 通信的socket地址
+    int m_sockfd;                           // 该http连接的socket
+    sockaddr_in m_address;                  // 通信的socket地址
     char m_read_buf[READ_BUFFER_SIZE];      // 读缓冲区
     int m_read_index;                       // 标识读缓冲区已经读入的客户端数据的下一个位置
-    int m_checked_idx;                      // 当前正在分析的字符在读缓冲区中的位置
+    int m_checked_index;                    // 当前正在分析的字符在读缓冲区中的位置
     int m_start_line;                       // 当前正在解析的行的起始位置
 
+    CHECK_STATE m_check_state;              // 主状态机当前所处的状态
 
+    METHOD m_method;                        // 请求方法
+    char m_real_file[ FILENAME_LEN ];       // 客户请求的目标文件的完整路径
+    char* m_url;                            // 请求目标文件的文件名
+    char* m_version;                        // 协议版本 目前只支持HTTP1.1
+    char* m_host;                           // 主机名
+    char* m_user_agent;                     // 客户端的信息
+    bool m_linger;                          // 判断是否保持连接
+    int m_content_length;                   // HTTP请求的消息总长度
+    char* m_string;                         // POST的用户名和密码
+    
 
     char m_write_buf[WRITE_BUFFER_SIZE];    // 写缓冲区
+    int m_write_index;                      // 写缓冲区中待发送的字节数
+    char* m_file_address;                   // 客户请求的目标文件被mmap到内存中的起始位置
+    struct stat m_file_stat;                // 目标文件的状态。通过它我们可以判断文件是否存在、是否为目录、是否可读，并获取文件大小等信息
+    struct iovec m_iv[2];                   // 我们将采用writev来执行写操作，所以定义下面两个成员，其中m_iv_count表示被写内存块的数量。
+    int m_iv_count;                         // m_iv_count表示被写内存块的数量
 
 
-    int m_bytes_to_send;
-    int m_bytes_have_send;
+    int m_bytes_to_send;                    // 将要发送的数据的字节数
+    int m_bytes_have_send;                  // 已经发送的字节数
 
 };
 
