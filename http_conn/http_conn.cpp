@@ -237,7 +237,7 @@ http_conn::HTTP_CODE http_conn::process_read()
         text = get_line();
         // 更新一下下一次需要读取的开始位置
         m_start_line = m_checked_index;
-        printf("got 1 http line : &=%s",text);
+        printf("got 1 http line : %s\n",text);
 
         switch (m_check_state)
         {
