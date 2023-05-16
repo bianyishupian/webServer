@@ -18,6 +18,8 @@
 #include <sys/uio.h>
 
 #include "../thread_pool/locker.h"
+#include "../timer/timer.h"
+#include "../c_log/log.h"
 
 
 
@@ -26,6 +28,7 @@ class http_conn
 public:
     static int m_epollfd;                       // 所有的socket上的事件都注册到一个epoll中
     static int m_user_count;                    // 统计用户的数量
+    int m_state;                                //读为0, 写为1
     static const int READ_BUFFER_SIZE = 2048;   // 读缓冲区大小
     static const int WRITE_BUFFER_SIZE = 2048;  // 写缓冲区大小
     static const int FILENAME_LEN = 200;        // 文件名的最大长度
@@ -74,14 +77,21 @@ public:
     };
 
 public:
-    http_conn();
-    ~http_conn();
+    http_conn() {}
+    ~http_conn() {}
 
     void process();     // 处理客户端请求
-    void init(int sockfd, const sockaddr_in & addr);    // 初始化新建立的连接
+    void init(int sockfd, const sockaddr_in & addr,char* root, int trigMod, int close_log);    // 初始化新建立的连接
     void conn_close();  // 关闭连接
     bool read();        // 非阻塞读
-    bool write();       // 非阻塞写
+    bool write();       // 写HTTP
+    sockaddr_in *get_address()
+    {
+        return &m_address;
+    }
+    // void initmysql_result(connection_pool *connPool);
+    int timer_flag;
+    int improv;
 
 private:
     void init();        // 初始化其余数据
@@ -137,11 +147,15 @@ private:
     struct stat m_file_stat;                // 目标文件的状态。通过它我们可以判断文件是否存在、是否为目录、是否可读，并获取文件大小等信息
     struct iovec m_iv[2];                   // 我们将采用writev来执行写操作，所以定义下面两个成员，其中m_iv_count表示被写内存块的数量。
     int m_iv_count;                         // m_iv_count表示被写内存块的数量
+    int m_trig_mode;                        // epoll触发模式
+    bool m_post;                            // POST方法
+
+    int m_close_log;
 
 
     int m_bytes_to_send;                    // 将要发送的数据的字节数
     int m_bytes_have_send;                  // 已经发送的字节数
-
+    char *web_root;                         // 根路径
 };
 
 

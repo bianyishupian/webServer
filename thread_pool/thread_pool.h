@@ -5,17 +5,18 @@
 #include <pthread.h>
 #include <exception>
 #include <list>
-#include "locker.h"
+#include "./locker.h"
 
 // 线程池模板类
-template<class T>
+template <typename T>
 class thread_pool
 {
 public:
-    thread_pool(int thread_num = 8, int max_requests = 10000);
+    thread_pool(int actor_model = 0, int thread_num = 8, int max_requests = 10000);
     ~thread_pool();
     // 添加任务
-    bool append(T* request);
+    bool append(T* request, int stat);
+    bool append_p(T* request);
 
 private:
     // 工作线程运行的函数，它不断从工作队列中取出任务并执行
@@ -42,12 +43,13 @@ private:
     std::list<T*> m_workQueue;  // 请求队列
     locker m_locker_workQueue;  // 互斥锁
     sem m_sem_workQueue;        // 信号量
-    bool m_falg_stop;           // 是否结束线程
+    // bool m_falg_stop;           // 是否结束线程
+    int m_actor_model;          // 模型切换
 };
 
-template<class T>
-thread_pool<T>::thread_pool(int thread_num, int max_requests)
-:m_thread_num(thread_num), m_max_requests(max_requests),m_falg_stop(false),m_threads(NULL)
+template<typename T>
+thread_pool<T>::thread_pool(int actor_model, int thread_num, int max_requests)
+:m_actor_model(actor_model), m_thread_num(thread_num), m_max_requests(max_requests),m_threads(NULL)
 {
     if((thread_num <= 0) || max_requests <= 0)
     {
@@ -63,11 +65,10 @@ thread_pool<T>::thread_pool(int thread_num, int max_requests)
     // 创建thread_number个线程，并将它们设置为线程脱离
     for (int i = 0; i < thread_num; ++i)
     {
-        std::cout<<"creating no."<<i<<" thread...";
+        // LOG_INFO("creating no.%d", i);
         // 创建thread_number个线程
         if (pthread_create(m_threads + i, NULL, worker, this) != 0)
         {
-            std::cout<<"- default"<<std::endl;    // 调试用
             delete[] m_threads;
             throw std::exception();
         }
@@ -77,18 +78,32 @@ thread_pool<T>::thread_pool(int thread_num, int max_requests)
             delete[] m_threads;
             throw std::exception();
         }
-        std::cout<<"- success"<<std::endl;
     }
 
 }
-template<class T>
+template<typename T>
 thread_pool<T>::~thread_pool()
 {
     delete[] m_threads;
-    m_falg_stop = true;
+    // m_falg_stop = true;
 }
-template<class T>
-bool thread_pool<T>::append(T* request)
+template<typename T>
+bool thread_pool<T>::append(T* request,int state)
+{
+    m_locker_workQueue.lock();
+    if (m_workQueue.size() >= m_max_requests)
+    {
+        m_locker_workQueue.unlock();
+        return false;
+    }
+    request->m_state = state;
+    m_workQueue.push_back(request);
+    m_locker_workQueue.unlock();
+    m_sem_workQueue.post();
+    return true;
+}
+template<typename T>
+bool thread_pool<T>::append_p(T* request)
 {
     m_locker_workQueue.lock();
     if (m_workQueue.size() >= m_max_requests)
@@ -101,7 +116,8 @@ bool thread_pool<T>::append(T* request)
     m_sem_workQueue.post();
     return true;
 }
-template<class T>
+
+template<typename T>
 void* thread_pool<T>::worker(void* arg)
 {
     // 将参数转为(thread_pool*)类型
@@ -109,10 +125,10 @@ void* thread_pool<T>::worker(void* arg)
     pool->run();
     return pool;    // 返回其实没什么意义
 }
-template<class T>
+template<typename T>
 void thread_pool<T>::run()
 {
-    while (!m_falg_stop)
+    while (true)
     {
         // 信号量等待
         m_sem_workQueue.wait();
@@ -131,8 +147,41 @@ void thread_pool<T>::run()
         {
             continue;
         }
-        request->process();
-
+        
+        if (1 == m_actor_model)
+        {
+            if (0 == request->m_state)
+            {
+                if (request->read())
+                {
+                    request->improv = 1;
+                    // connectionRAII mysqlcon(&request->mysql, m_connPool);
+                    request->process();
+                }
+                else
+                {
+                    request->improv = 1;
+                    request->timer_flag = 1;
+                }
+            }
+            else
+            {
+                if (request->write())
+                {
+                    request->improv = 1;
+                }
+                else
+                {
+                    request->improv = 1;
+                    request->timer_flag = 1;
+                }
+            }
+        }
+        else
+        {
+            // connectionRAII mysqlcon(&request->mysql, m_connPool);
+            request->process();
+        }
     }
     
 }

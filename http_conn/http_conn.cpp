@@ -16,7 +16,7 @@ const char *error_404_form = "The requested file was not found on this server.\n
 const char *error_500_title = "Internal Error";
 const char *error_500_form = "There was an unusual problem serving the request file.\n";
 
-const char* web_root = "/home/user/cpp/webServer/resources";
+// const char* web_root = "/home/user/cpp/webServer/root";
 
 // 设置fd非阻塞
 void setNonblocking(int fd)
@@ -27,11 +27,17 @@ void setNonblocking(int fd)
 }
 
 // 添加fd到epoll中，在http_conn中实现
-void add_fd(int epollfd,int fd,bool one_shot)
+void add_fd(int epollfd,int fd,bool one_shot,int trigMod)
 {
     epoll_event event;
-    event.events = EPOLLIN | EPOLLRDHUP;
-    // event.events = EPOLLIN | EPOLLRDHUP | EPOLLET;
+    if(trigMod == 1)
+    {
+        event.events = EPOLLIN | EPOLLRDHUP | EPOLLET;
+    }
+    else
+    {
+        event.events = EPOLLIN | EPOLLRDHUP;
+    } 
     event.data.fd = fd;
     if(one_shot)
     {
@@ -50,36 +56,33 @@ void remove_fd(int epollfd,int fd)
 }
 
 // 修改fd，重置EPOLLONESHOT事件
-void mod_fd(int epollfd,int fd,int ev)
+void mod_fd(int epollfd,int fd,int ev,int trigMod)
 {
     epoll_event event;
-    event.events = EPOLLIN | EPOLLRDHUP | EPOLLONESHOT;
     event.data.fd = fd;
-    event.events |= ev;
+    if(trigMod == 1)
+    {
+        event.events = ev | EPOLLRDHUP | EPOLLET | EPOLLONESHOT;
+    }
+    else
+    {
+        event.events = ev | EPOLLRDHUP | EPOLLONESHOT;
+    }
     epoll_ctl(epollfd,EPOLL_CTL_MOD,fd,&event);
 }
 
 
-http_conn::http_conn()
-{
-
-}
-http_conn::~http_conn()
-{
-
-}
-
 
 // 初始化连接
-void http_conn::init(int sockfd, const sockaddr_in & addr)
+void http_conn::init(int sockfd, const sockaddr_in & addr, char* root, int trigMod, int close_log)
 {
-    this->m_sockfd = sockfd;
-    this->m_address = addr;
-    // 设置端口复用
-    int reuse = 1;
-    setsockopt(m_sockfd,SOL_SOCKET,SO_REUSEPORT,&reuse,sizeof(reuse));
+    m_sockfd = sockfd;
+    m_address = addr;
+    m_trig_mode = trigMod;
+    web_root = root;
+    m_close_log = close_log;
     // 添加到epoll中
-    add_fd(m_epollfd,m_sockfd,true);
+    add_fd(m_epollfd,m_sockfd,true,m_trig_mode);
     ++m_user_count; // 总用户加一
 
     init();
@@ -102,8 +105,12 @@ void http_conn::init()
     m_user_agent = 0;
     m_linger = false;
     m_content_length = 0;
-    m_string = 0;
+    // m_string = 0;
     m_write_index = 0;
+    m_post = false;
+    timer_flag = 0;
+    improv = 0;
+    m_state = 0;
 
 
     memset(m_read_buf,'\0',READ_BUFFER_SIZE);
@@ -131,37 +138,55 @@ bool http_conn::read()
     }
     // 读取到的字节
     int bytes_read = 0;
-    while (true)
+
+    // LT
+    if(m_trig_mode == 0)
     {
-        bytes_read = recv(m_sockfd,m_read_buf + m_read_index,READ_BUFFER_SIZE - m_read_index,0);
-        if(bytes_read == -1)
-        {
-            if(errno == EAGAIN || errno == EWOULDBLOCK)
-            {
-                // 没有数据可读
-                break;
-            }
-            return false;
-        }
-        else if(bytes_read == 0)
-        {
-            // 对方关闭连接
-            return false;
-        }
+        bytes_read = recv(m_sockfd, m_read_buf + m_read_index, READ_BUFFER_SIZE - m_read_index, 0);
         m_read_index += bytes_read;
+
+        if (bytes_read <= 0)
+        {
+            return false;
+        }
+
+        return true;
     }
-    // printf("read data:\n%s",m_read_buf);
-    return true;
+    // ET
+    else
+    {
+        while (true)
+        {
+            bytes_read = recv(m_sockfd,m_read_buf + m_read_index,READ_BUFFER_SIZE - m_read_index,0);
+            if(bytes_read == -1)
+            {
+                if(errno == EAGAIN || errno == EWOULDBLOCK)
+                {
+                    // 没有数据可读
+                    break;
+                }
+                return false;
+            }
+            else if(bytes_read == 0)
+            {
+                // 对方关闭连接
+                return false;
+            }
+            m_read_index += bytes_read;
+        }
+        // printf("read data:\n%s",m_read_buf);
+        return true;
+    }
+    
 }
 // 写HTTP响应
 bool http_conn::write()
 {
     int temp = 0;
-    m_bytes_have_send = 0;  // 已经发送的字节
-    m_bytes_to_send = m_write_index;    // 将要发送的字节
+    
     if(m_bytes_to_send == 0)
     {
-        mod_fd(m_epollfd,m_sockfd,EPOLLIN);
+        mod_fd(m_epollfd,m_sockfd,EPOLLIN,m_trig_mode);
         init();
         return true;
     }
@@ -178,7 +203,7 @@ bool http_conn::write()
             */
             if( errno == EAGAIN )
             {
-                mod_fd( m_epollfd, m_sockfd, EPOLLOUT );
+                mod_fd( m_epollfd, m_sockfd, EPOLLOUT, m_trig_mode);
                 return true;
             }
             unmap();    // 释放内存映射
@@ -206,7 +231,7 @@ bool http_conn::write()
         {
             // 没有数据要发送了
             unmap();
-            mod_fd(m_epollfd, m_sockfd, EPOLLIN);
+            mod_fd(m_epollfd, m_sockfd, EPOLLIN, m_trig_mode);
             // 根据m_linger判断是否要保持连接
             if (m_linger)
             {
@@ -237,7 +262,7 @@ http_conn::HTTP_CODE http_conn::process_read()
         text = get_line();
         // 更新一下下一次需要读取的开始位置
         m_start_line = m_checked_index;
-        printf("got 1 http line : %s\n",text);
+        // printf("got 1 http line : %s\n",text);
 
         switch (m_check_state)
         {
@@ -324,30 +349,39 @@ http_conn::LINE_STATUS http_conn::parse_line()
 http_conn::HTTP_CODE http_conn::do_request()
 {
     strcpy(m_real_file,web_root);
-    // m_read_file:/home/user/cpp/webServer/resources
+    // m_read_file:/home/user/cpp/webServer/root
     int len = strlen(web_root);
-    strncpy(m_real_file + len,m_url,FILENAME_LEN - len -1);
-    // m_read_file:/home/user/cpp/webServer/resources/index.html
-    if(stat(m_real_file,&m_file_stat) < 0)
+
+    if(m_post)
     {
-        return NO_RESOURCE;
+        // post方法 need reWriting
     }
-    // 判断访问权限
-    if(!(m_file_stat.st_mode & S_IROTH))
+    else
     {
-        return FORBIDDEN_REQUEST;
+        strncpy(m_real_file + len,m_url,FILENAME_LEN - len -1);
+        // m_read_file:/home/user/cpp/webServer/root/index.html
+        if(stat(m_real_file,&m_file_stat) < 0)
+        {
+            return NO_RESOURCE;
+        }
+        // 判断访问权限
+        if(!(m_file_stat.st_mode & S_IROTH))
+        {
+            return FORBIDDEN_REQUEST;
+        }
+        // 判断是否为目录
+        if(S_ISDIR(m_file_stat.st_mode))
+        {
+            return BAD_REQUEST;
+        }
+        // 只读方式打开文件
+        int fd = open(m_real_file, O_RDONLY);
+        // 创建内存映射
+        m_file_address = (char *)mmap(0, m_file_stat.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+        close(fd);
+        return FILE_REQUEST;
     }
-    // 判断是否为目录
-    if(S_ISDIR(m_file_stat.st_mode))
-    {
-        return BAD_REQUEST;
-    }
-    // 只读方式打开文件
-    int fd = open(m_real_file, O_RDONLY);
-    // 创建内存映射
-    m_file_address = (char *)mmap(0, m_file_stat.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
-    close(fd);
-    return FILE_REQUEST;
+    
 
 }
 
@@ -383,6 +417,7 @@ http_conn::HTTP_CODE http_conn::parse_request_line(char *text)
     }else if(strcasecmp(method,"POST") == 0)
     {
         m_method = POST;
+        m_post = true;
     }
     else return BAD_REQUEST;
 
@@ -465,7 +500,7 @@ http_conn::HTTP_CODE http_conn::parse_headers(char *text)
     }
     else
     {
-        printf("oop!unknow header: %s\n",text);
+        // printf("oop!unknow header: %s\n",text);
     }
     return NO_REQUEST;
 }
@@ -617,8 +652,13 @@ bool http_conn::process_write(HTTP_CODE ret)
 
 
     default:
-        break;
+        return false;
     }
+    m_iv[0].iov_base = m_write_buf;
+    m_iv[0].iov_len = m_write_index;
+    m_iv_count = 1;
+    m_bytes_to_send = m_write_index;
+    return true;
 }
 
 // 由线程池的工作线程调用，处理HTTP请求的入口函数
@@ -629,7 +669,7 @@ void http_conn::process()
     HTTP_CODE read_ret = process_read();
     if(read_ret == NO_REQUEST)
     {
-        mod_fd(m_epollfd, m_sockfd, EPOLLIN);
+        mod_fd(m_epollfd, m_sockfd, EPOLLIN, m_trig_mode);
         return;
     }
 
@@ -639,7 +679,7 @@ void http_conn::process()
     {
         conn_close();
     }
-    mod_fd(m_epollfd,m_sockfd,EPOLLOUT);
+    mod_fd(m_epollfd, m_sockfd, EPOLLOUT, m_trig_mode);
 }
 
 
