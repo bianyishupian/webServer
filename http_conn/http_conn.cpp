@@ -26,7 +26,7 @@ void setNonblocking(int fd)
     fcntl(fd,F_SETFL,new_flag);
 }
 
-// 添加fd到epoll中，在http_conn中实现
+// 添加fd到epoll中
 void add_fd(int epollfd,int fd,bool one_shot,int trigMod)
 {
     epoll_event event;
@@ -314,7 +314,7 @@ http_conn::LINE_STATUS http_conn::parse_line()
 {
     char temp;
     for( ; m_checked_index < m_read_index; ++m_checked_index)
-    {
+    {       
         temp = m_read_buf[m_checked_index];
         if(temp == '\r')
         {

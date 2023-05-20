@@ -28,13 +28,15 @@ Server::~Server()
     delete m_pool;
 }
 
-void Server::init(int port, int opt_linger, int trigmode, int thread_num, int actor_model)
+void Server::init(int port, int opt_linger, int trigmode, int thread_num, int actor_model, int log_write, int close_log)
 {
     m_port = port;
     m_thread_num = thread_num;
     m_OPT_LINGER = opt_linger;
     m_trig_mode = trigmode;
     m_actor_mod = actor_model;
+    m_log_write = log_write;
+    m_close_log = close_log;
 }
 
 void Server::trig_mode()
@@ -69,7 +71,7 @@ void Server::log_write()
 {
     if(m_close_log == 0)
     {
-        if(m_log_write == 1)
+        if(m_log_write == 1)    // 异步
         {
             Log::get_instance()->init("./ServerLog", m_close_log, 2000, 800000, 800);
         }

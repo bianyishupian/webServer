@@ -11,7 +11,7 @@ int main(int argc, char* argv[])
 
     Server server;
     server.init(config.port,config.opt_linger,config.trig_mod,
-                config.thread_num,config.actor_model);
+                config.thread_num,config.actor_model,config.log_write,config.close_log);
     
     // 日志
     server.log_write();

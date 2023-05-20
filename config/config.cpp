@@ -35,9 +35,6 @@ void Config::parse_arg(int argc, char *argv[])
         case 'o':
             opt_linger = atoi(optarg);
             break;
-        // case 's':
-        //     sql_num = atoi(optarg);
-        //     break;
         case 't':
             thread_num = atoi(optarg);
             break;

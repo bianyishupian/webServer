@@ -43,7 +43,6 @@ private:
     std::list<T*> m_workQueue;  // 请求队列
     locker m_locker_workQueue;  // 互斥锁
     sem m_sem_workQueue;        // 信号量
-    // bool m_falg_stop;           // 是否结束线程
     int m_actor_model;          // 模型切换
 };
 
@@ -155,7 +154,6 @@ void thread_pool<T>::run()
                 if (request->read())
                 {
                     request->improv = 1;
-                    // connectionRAII mysqlcon(&request->mysql, m_connPool);
                     request->process();
                 }
                 else
@@ -179,7 +177,6 @@ void thread_pool<T>::run()
         }
         else
         {
-            // connectionRAII mysqlcon(&request->mysql, m_connPool);
             request->process();
         }
     }

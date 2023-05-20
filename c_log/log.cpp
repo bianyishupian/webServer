@@ -18,6 +18,7 @@ bool Log::init(const char *file_name,int close_log,int log_buf_size,int split_li
 {
     if(max_queue_size >= 1)
     {
+        // 如果阻塞队列有数量，那么就是异步
         m_is_async = true;
         m_log_queue = new block_queue<std::string>(max_queue_size);
         pthread_t tid;

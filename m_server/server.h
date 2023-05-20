@@ -26,7 +26,7 @@ public:
     Server();                           // 构造函数，新建http_conn对象、定时器，root路径
     ~Server();                          // 关闭fd，释放空间
 
-    void init(int port, int opt_linger, int trigmode, int thread_num, int actor_model);                // 初始化
+    void init(int port, int opt_linger, int trigmode, int thread_num, int actor_model, int log_write, int close_log);                // 初始化
 
     void thread_pool_c();               // 线程池创建
     void trig_mode();                   // epoll触发模式
