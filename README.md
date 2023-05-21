@@ -20,7 +20,7 @@ Linux下C++轻量级Web服务器，经用webbench-1.5测试能实现上万QPS。
 
 [8 压力测试](https://github.com/bianyishupian/webServer#8-压力测试)
 
-[还未实现的功能](https://github.com/bianyishupian/webServer#还未实现的功能)
+[还可以添加的功能](https://github.com/bianyishupian/webServer#还可以添加的功能)
 
 [致谢](https://github.com/bianyishupian/webServer#致谢)
 
