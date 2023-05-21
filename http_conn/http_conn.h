@@ -28,7 +28,7 @@ class http_conn
 public:
     static int m_epollfd;                       // 所有的socket上的事件都注册到一个epoll中
     static int m_user_count;                    // 统计用户的数量
-    int m_state;                                //读为0, 写为1
+    int m_state;                                // reactor模型中区分读和写事件：读为0, 写为1
     static const int READ_BUFFER_SIZE = 2048;   // 读缓冲区大小
     static const int WRITE_BUFFER_SIZE = 2048;  // 写缓冲区大小
     static const int FILENAME_LEN = 200;        // 文件名的最大长度
@@ -90,8 +90,8 @@ public:
         return &m_address;
     }
     // void initmysql_result(connection_pool *connPool);
-    int timer_flag;
-    int improv;
+    int timer_flag;     // 是否要执行deal_timer函数的标志
+    int improv;         // 执行完read()函数后将其置为1
 
 private:
     void init();        // 初始化其余数据
@@ -127,7 +127,6 @@ private:
     int m_read_index;                       // 标识读缓冲区已经读入的客户端数据的下一个位置
     int m_checked_index;                    // 当前正在分析的字符在读缓冲区中的位置
     int m_start_line;                       // 当前正在解析的行的起始位置
-
     CHECK_STATE m_check_state;              // 主状态机当前所处的状态
 
     METHOD m_method;                        // 请求方法
@@ -150,7 +149,7 @@ private:
     int m_trig_mode;                        // epoll触发模式
     bool m_post;                            // POST方法
 
-    int m_close_log;
+    int m_close_log;                        // 是否关闭日志的标志
 
 
     int m_bytes_to_send;                    // 将要发送的数据的字节数

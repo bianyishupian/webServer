@@ -1,1 +1,57 @@
-2023-05-21 16:14:50.475626 [info]: timer tick
+2023-05-21 22:07:51.712048 [info]: timer tick
+2023-05-21 22:07:56.712431 [info]: timer tick
+2023-05-21 22:07:57.472598 [info]: deal with the client(192.168.1.238)
+2023-05-21 22:07:57.472691 [info]: adjust timer once
+2023-05-21 22:07:57.473786 [info]: send data to the client(192.168.1.238)
+2023-05-21 22:07:57.473876 [info]: adjust timer once
+2023-05-21 22:07:57.595380 [info]: deal with the client(192.168.1.238)
+2023-05-21 22:07:57.595472 [info]: adjust timer once
+2023-05-21 22:07:57.597277 [info]: send data to the client(192.168.1.238)
+2023-05-21 22:07:57.597416 [info]: adjust timer once
+2023-05-21 22:08:01.713026 [info]: timer tick
+2023-05-21 22:08:02.886853 [info]: deal with the client(192.168.1.238)
+2023-05-21 22:08:02.886962 [info]: adjust timer once
+2023-05-21 22:08:02.887346 [info]: send data to the client(192.168.1.238)
+2023-05-21 22:08:02.887360 [info]: adjust timer once
+2023-05-21 22:08:02.953727 [info]: deal with the client(192.168.1.238)
+2023-05-21 22:08:02.953820 [info]: adjust timer once
+2023-05-21 22:08:02.955791 [info]: send data to the client(192.168.1.238)
+2023-05-21 22:08:02.955935 [info]: adjust timer once
+2023-05-21 22:08:06.295479 [info]: deal with the client(192.168.1.238)
+2023-05-21 22:08:06.295621 [info]: adjust timer once
+2023-05-21 22:08:06.296130 [info]: send data to the client(192.168.1.238)
+2023-05-21 22:08:06.296175 [info]: adjust timer once
+2023-05-21 22:08:06.355673 [info]: deal with the client(192.168.1.238)
+2023-05-21 22:08:06.355739 [info]: adjust timer once
+2023-05-21 22:08:06.356226 [info]: send data to the client(192.168.1.238)
+2023-05-21 22:08:06.356274 [info]: adjust timer once
+2023-05-21 22:08:06.713295 [info]: timer tick
+2023-05-21 22:08:11.714180 [info]: timer tick
+2023-05-21 22:08:16.715188 [info]: timer tick
+2023-05-21 22:08:16.716529 [info]: deal with the client(192.168.1.238)
+2023-05-21 22:08:16.716619 [info]: adjust timer once
+2023-05-21 22:08:16.717085 [info]: send data to the client(192.168.1.238)
+2023-05-21 22:08:16.717168 [info]: adjust timer once
+2023-05-21 22:08:16.778962 [info]: deal with the client(192.168.1.238)
+2023-05-21 22:08:16.779051 [info]: adjust timer once
+2023-05-21 22:08:16.779429 [info]: send data to the client(192.168.1.238)
+2023-05-21 22:08:16.779471 [info]: adjust timer once
+2023-05-21 22:08:21.716543 [info]: timer tick
+2023-05-21 22:08:21.718302 [info]: deal with the client(192.168.1.238)
+2023-05-21 22:08:21.718445 [info]: adjust timer once
+2023-05-21 22:08:21.719307 [info]: send data to the client(192.168.1.238)
+2023-05-21 22:08:21.719384 [info]: adjust timer once
+2023-05-21 22:08:21.741324 [info]: deal with the client(192.168.1.238)
+2023-05-21 22:08:21.741415 [info]: adjust timer once
+2023-05-21 22:08:21.741675 [info]: send data to the client(192.168.1.238)
+2023-05-21 22:08:21.741693 [info]: adjust timer once
+2023-05-21 22:08:21.744993 [info]: deal with the client(192.168.1.238)
+2023-05-21 22:08:21.745059 [info]: adjust timer once
+2023-05-21 22:08:21.745255 [info]: send data to the client(192.168.1.238)
+2023-05-21 22:08:21.745277 [info]: adjust timer once
+2023-05-21 22:08:23.372128 [info]: close fd 9
+2023-05-21 22:08:24.373495 [info]: close fd 11
+2023-05-21 22:08:25.477497 [info]: close fd 12
+2023-05-21 22:08:26.716787 [info]: timer tick
+2023-05-21 22:08:26.817847 [info]: close fd 10
+2023-05-21 22:08:26.818248 [info]: close fd 8
